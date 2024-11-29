@@ -8,9 +8,9 @@ find_package(jsoncpp REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -g")
 
-add_executable(trade_aggregate main.cpp)
+add_executable(aggregate Main.cpp Scraper.cpp)
 
-target_include_directories(trade_aggregate PRIVATE ${Boost_INCLUDE_DIRS})
-target_link_libraries(trade_aggregate PRIVATE Boost::boost Boost::system jsoncpp_lib OpenSSL::SSL OpenSSL::Crypto pthread)
+target_include_directories(aggregate PRIVATE ${Boost_INCLUDE_DIRS})
+target_link_libraries(aggregate PRIVATE Boost::boost Boost::system jsoncpp_lib OpenSSL::SSL OpenSSL::Crypto pthread)
