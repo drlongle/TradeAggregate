@@ -8,3 +8,16 @@ sudo apt install libjsoncpp-dev
 sudo apt install libboost-all-dev
 sudo apt-get install openssl libssl-dev
 
+* Build
+cmake -B build
+cd build
+make -j 8
+
+* Run
+./aggregate
+
+* Design
+
+* Tradeoff
+
+* Possible extensions

@@ -1,4 +1,3 @@
-
 #include <chrono>
 #include <iostream>
 #include <optional>
@@ -11,15 +10,16 @@
 #include <boost/beast/http.hpp>
 #include <boost/beast/ssl.hpp>
 
+#include <jsoncpp/json/json.h>
+
 #include "Scraper.h"
 
 class Scraper::Impl {
   public:
-    Impl(const std::string &host_, const std::string &port_,
-         const std::string &path_, int version_)
-        : host{host_}, port{port_}, path{path_}, version{version_},
-          ctx{boost::asio::ssl::context::tlsv12_client}, resolver{ioc},
-          resolve_results{resolver.resolve(host_, port_)} {
+    Impl(const ScraperConfig &config_)
+        : config{config_}, ctx{boost::asio::ssl::context::tlsv12_client},
+          resolver{ioc}, resolve_results{
+                             resolver.resolve(config_.host, config_.port)} {
         ctx.set_default_verify_paths();
         ctx.set_verify_mode(boost::asio::ssl::verify_peer);
     }
@@ -27,10 +27,7 @@ class Scraper::Impl {
     std::optional<std::string> fetch();
 
   private:
-    const std::string host;
-    const std::string port;
-    const std::string path;
-    const int version;
+    ScraperConfig config;
     boost::asio::io_context ioc;
     boost::asio::ssl::context ctx;
     boost::asio::ip::tcp::resolver resolver;
@@ -43,6 +40,9 @@ std::optional<std::string> Scraper::Impl::fetch() {
     namespace net = boost::asio;
     namespace ssl = net::ssl;
 
+    const auto &host{config.host};
+    const auto &path{config.path};
+    const auto version{config.version};
     std::optional<std::string> result;
 
     try {
@@ -83,19 +83,26 @@ std::optional<std::string> Scraper::Impl::fetch() {
     return result;
 }
 
-Scraper::Scraper(const std::string host, const std::string port,
-                 const std::string path, int version)
-    : impl{std::make_unique<Impl>(host, port, path, version)} {}
+Scraper::Scraper(const ScraperConfig &conf)
+    : config{conf}, impl{std::make_unique<Impl>(conf)}, queue{queue_size} {}
 
 Scraper::~Scraper() = default;
 
-void Scraper::run() {
-    while (!stop_flag.load(std::memory_order_relaxed)) {
+void Scraper::run(std::stop_token stopToken) {
+    Json::Reader reader;
+    Json::Value json;
+
+    while (!stopToken.stop_requested()) {
         auto res = impl->fetch();
-        if (res.has_value())
-            std::cout << res.value() << std::endl;
+        if (res.has_value()) {
+            // std::cout << res.value() << std::endl;
+            bool parsingSuccessful = reader.parse(res.value(), json);
+            std::cout << config.path << " -> " << parsingSuccessful
+                      << std::endl;
+            while (!queue.push(json)) {
+                // Retry if the queue is full
+            }
+        }
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 }
-
-void Scraper::stop() { stop_flag.store(true, std::memory_order_relaxed); }

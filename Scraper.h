@@ -1,25 +1,36 @@
 #pragma once
 
-#include <atomic>
 #include <memory>
 #include <string>
+#include <stop_token>
 
 #include <boost/lockfree/spsc_queue.hpp>
 
+struct ScraperConfig {
+    std::string host;
+    std::string port;
+    std::string path;
+    int version;
+};
+
 class Scraper {
   public:
-    Scraper(const std::string host, std::string port, const std::string path,
-            int version);
+    Scraper(const ScraperConfig &config);
+    Scraper(const Scraper &) = delete;
+    Scraper &operator=(const Scraper &) = delete;
 
     ~Scraper();
 
-    void run();
+    void run(std::stop_token stopToken);
 
-    void stop();
+    using QueueType = boost::lockfree::spsc_queue<Json::Value>;
+    inline QueueType &getQueue() { return queue; }
+
+    static constexpr size_t queue_size = 8192;
 
   private:
     class Impl;
-
-    std::atomic<bool> stop_flag{false};
+    ScraperConfig config;
     std::unique_ptr<Impl> impl;
+    boost::lockfree::spsc_queue<Json::Value> queue;
 };

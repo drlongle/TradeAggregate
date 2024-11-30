@@ -1,32 +1,10 @@
-
 #include <algorithm>
 #include <atomic>
-#include <bit>
-#include <bitset>
-#include <cassert>
-#include <climits>
-#include <cmath>
-#include <condition_variable>
-#include <functional>
-#include <future>
-#include <iomanip>
+#include <chrono>
 #include <iostream>
-#include <iterator>
-#include <list>
-#include <map>
 #include <memory>
-#include <numeric>
-#include <queue>
-#include <random>
-#include <ranges>
-#include <regex>
-#include <set>
-#include <sstream>
-#include <stack>
-#include <string_view>
+#include <stop_token>
 #include <thread>
-#include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #include <json/json.h>
@@ -34,13 +12,36 @@
 #include "Scraper.h"
 
 int main() {
-    // poll("api.exchange.coinbase.com", "443", "/products/BTC-USD/trades", 11);
-    // poll("api.exchange.coinbase.com", "443", "/products/ETH-USD/trades", 11);
-    // poll("api.exchange.coinbase.com", "443", "/products/SOL-USD/trades", 11);
+    std::vector<ScraperConfig> scraper_configs{
+        {.host = "api.exchange.coinbase.com",
+         .port = "443",
+         .path = "/products/BTC-USD/trades",
+         .version = 11},
+        {.host = "api.exchange.coinbase.com",
+         .port = "443",
+         .path = "/products/ETH-USD/trades",
+         .version = 11},
+        {.host = "api.exchange.coinbase.com",
+         .port = "443",
+         .path = "/products/SOL-USD/trades",
+         .version = 11},
+    };
 
-    Scraper scraper{"api.exchange.coinbase.com", "443",
-                    "/products/BTC-USD/trades", 11};
-    scraper.run();
+    std::vector<std::jthread> jthreads;
+    std::vector<std::unique_ptr<Scraper>> scrapers;
+    for (const auto &config : scraper_configs) {
+        scrapers.emplace_back(std::make_unique<Scraper>(config));
+    }
+
+    for (auto &scraper : scrapers) {
+        jthreads.emplace_back(&Scraper::run, scraper.get());
+    }
+
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+
+    for (auto &jt : jthreads) {
+        jt.request_stop();
+    }
 
     return 0;
 }
