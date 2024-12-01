@@ -1,6 +1,7 @@
 #include <chrono>
 #include <iostream>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <thread>
 
@@ -10,9 +11,9 @@
 #include <boost/beast/http.hpp>
 #include <boost/beast/ssl.hpp>
 
-#include <jsoncpp/json/json.h>
-
 #include "Scraper.h"
+
+namespace TradeAggregate {
 
 class Scraper::Impl {
   public:
@@ -89,20 +90,13 @@ Scraper::Scraper(const ScraperConfig &conf)
 Scraper::~Scraper() = default;
 
 void Scraper::run(std::stop_token stopToken) {
-    Json::Reader reader;
-    Json::Value json;
 
     while (!stopToken.stop_requested()) {
         auto res = impl->fetch();
         if (res.has_value()) {
-            // std::cout << res.value() << std::endl;
-            bool parsingSuccessful = reader.parse(res.value(), json);
-            std::cout << config.path << " -> " << parsingSuccessful
-                      << std::endl;
-            while (!queue.push(json)) {
-                // Retry if the queue is full
-            }
+            queue.push(res.value());
         }
-        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 }
+
+} // namespace TradeAggregate

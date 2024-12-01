@@ -1,12 +1,16 @@
 #pragma once
 
 #include <memory>
-#include <string>
 #include <stop_token>
+#include <string>
+#include <vector>
 
 #include <boost/lockfree/spsc_queue.hpp>
 
+namespace TradeAggregate {
+
 struct ScraperConfig {
+    std::string symbol;
     std::string host;
     std::string port;
     std::string path;
@@ -23,14 +27,19 @@ class Scraper {
 
     void run(std::stop_token stopToken);
 
-    using QueueType = boost::lockfree::spsc_queue<Json::Value>;
+    static constexpr size_t queue_size = 65536;
+    using QueueType = boost::lockfree::spsc_queue<std::string>;
     inline QueueType &getQueue() { return queue; }
 
-    static constexpr size_t queue_size = 8192;
+    inline std::string &getSymbol() { return config.symbol; }
 
   private:
     class Impl;
     ScraperConfig config;
     std::unique_ptr<Impl> impl;
-    boost::lockfree::spsc_queue<Json::Value> queue;
+    QueueType queue;
 };
+
+using ScraperList = std::vector<std::unique_ptr<Scraper>>;
+
+} // namespace TradeAggregate

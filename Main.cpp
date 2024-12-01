@@ -3,25 +3,32 @@
 #include <chrono>
 #include <iostream>
 #include <memory>
+#include <ranges>
 #include <stop_token>
 #include <thread>
 #include <vector>
 
 #include <json/json.h>
 
+#include "Aggregator.h"
 #include "Scraper.h"
 
 int main() {
+    using namespace TradeAggregate;
+
     std::vector<ScraperConfig> scraper_configs{
-        {.host = "api.exchange.coinbase.com",
+        {.symbol = "BTC-USD",
+         .host = "api.exchange.coinbase.com",
          .port = "443",
          .path = "/products/BTC-USD/trades",
          .version = 11},
-        {.host = "api.exchange.coinbase.com",
+        {.symbol = "ETH-USD",
+         .host = "api.exchange.coinbase.com",
          .port = "443",
          .path = "/products/ETH-USD/trades",
          .version = 11},
-        {.host = "api.exchange.coinbase.com",
+        {.symbol = "SOL-USD",
+         .host = "api.exchange.coinbase.com",
          .port = "443",
          .path = "/products/SOL-USD/trades",
          .version = 11},
@@ -37,10 +44,18 @@ int main() {
         jthreads.emplace_back(&Scraper::run, scraper.get());
     }
 
-    std::this_thread::sleep_for(std::chrono::seconds(10));
+    Aggregator agg{scrapers};
+    jthreads.emplace_back(&Aggregator::run, &agg);
 
+    std::this_thread::sleep_for(std::chrono::seconds(100));
+
+    std::cout << "Stopping all threads..." << std::endl;
+
+    // Reverse the threads to stop the aggregator before the scrapers.
+    std::ranges::reverse(jthreads);
     for (auto &jt : jthreads) {
         jt.request_stop();
+        jt.join();
     }
 
     return 0;

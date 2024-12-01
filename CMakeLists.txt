@@ -8,9 +8,11 @@ find_package(jsoncpp REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -g")
 
-add_executable(aggregate Main.cpp Scraper.cpp)
+# TODO Remove -fsanitize=address before submission
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -g -fsanitize=address")
+
+add_executable(aggregate Aggregator.cpp Main.cpp Scraper.cpp)
 
 target_include_directories(aggregate PRIVATE ${Boost_INCLUDE_DIRS})
 target_link_libraries(aggregate PRIVATE Boost::boost Boost::system jsoncpp_lib OpenSSL::SSL OpenSSL::Crypto pthread)
