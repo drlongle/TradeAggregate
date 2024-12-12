@@ -10,7 +10,7 @@ find_package(Threads REQUIRED)
 
 
 # TODO Remove -fsanitize=address before submission
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -g -fsanitize=address")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -Wno-unused-parameter -Werror -Wreturn-type -fno-strict-aliasing -std=c++20 -g -fsanitize=address -fsanitize=undefined -fsanitize=signed-integer-overflow")
 
 add_executable(aggregate Aggregator.cpp Main.cpp Scraper.cpp)
 

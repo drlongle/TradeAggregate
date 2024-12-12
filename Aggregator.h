@@ -1,6 +1,5 @@
 #pragma once
 
-#include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <iosfwd>
@@ -16,11 +15,12 @@ namespace TradeAggregate {
 
 struct Trade {
     std::string symbol;
-    std::uint64_t id;
+    std::uint64_t trade_id;
     std::string side;
     std::string size;
     std::string price;
-    std::chrono::system_clock::time_point tp;
+    std::string time;
+    std::chrono::system_clock::time_point timepoint;
 };
 
 class Aggregator {

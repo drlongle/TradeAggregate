@@ -18,9 +18,8 @@ namespace TradeAggregate {
 class Scraper::Impl {
   public:
     Impl(const ScraperConfig &config_)
-        : config{config_}, ctx{boost::asio::ssl::context::tlsv12_client},
-          resolver{ioc}, resolve_results{
-                             resolver.resolve(config_.host, config_.port)} {
+        : config{config_}, ctx{boost::asio::ssl::context::tlsv12_client}, resolver{ioc},
+          resolve_results{resolver.resolve(config_.host, config_.port)} {
         ctx.set_default_verify_paths();
         ctx.set_verify_mode(boost::asio::ssl::verify_peer);
     }
@@ -50,8 +49,7 @@ std::optional<std::string> Scraper::Impl::fetch() {
         ssl::stream<beast::tcp_stream> stream(ioc, ctx);
 
         if (!SSL_set_tlsext_host_name(stream.native_handle(), host.c_str())) {
-            beast::error_code ec{static_cast<int>(::ERR_get_error()),
-                                 net::error::get_ssl_category()};
+            beast::error_code ec{static_cast<int>(::ERR_get_error()), net::error::get_ssl_category()};
             throw beast::system_error{ec};
         }
 
@@ -84,8 +82,7 @@ std::optional<std::string> Scraper::Impl::fetch() {
     return result;
 }
 
-Scraper::Scraper(const ScraperConfig &conf)
-    : config{conf}, impl{std::make_unique<Impl>(conf)}, queue{queue_size} {}
+Scraper::Scraper(const ScraperConfig &conf) : config{conf}, impl{std::make_unique<Impl>(conf)}, queue{queue_size} {}
 
 Scraper::~Scraper() = default;
 

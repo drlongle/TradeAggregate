@@ -1,8 +1,10 @@
 #include <iostream>
 #include <map>
 #include <sstream>
+#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 
 #include <jsoncpp/json/json.h>
 
@@ -10,9 +12,8 @@
 #include "date.h"
 
 std::ostream &operator<<(std::ostream &os, const TradeAggregate::Trade &trade) {
-    os << "{ symbol: " << trade.symbol << " trade_id: " << trade.id
-       << " side: " << trade.side << " size: " << trade.size
-       << " price: " << trade.price << " time: " << trade.tp << " }";
+    os << "{ symbol: " << trade.symbol << " trade_id: " << trade.trade_id << " side: " << trade.side
+       << " size: " << trade.size << " price: " << trade.price << " time: " << trade.time << " }";
     return os;
 }
 
@@ -22,35 +23,68 @@ class Aggregator::Impl {
   public:
     Impl(ScraperList &scrapers_) : scrapers{scrapers_}, queue{queue_size} {}
 
+    static constexpr size_t max_size{1'000'000};
+    template <typename CONTAINER> void purge(CONTAINER &container, size_t max_size) {
+        while (container.size() > max_size) {
+            container.erase(std::begin(container));
+        }
+    }
+
     bool poll() {
         std::string str;
         Json::Value json;
-        std::chrono::system_clock::time_point tp;
-        std::vector<Trade> trades;
+        std::chrono::system_clock::time_point timepoint;
         bool result{false};
+        std::vector<const Trade *> new_trades;
 
         for (size_t i{0}, sz{scrapers.size()}; i < sz; ++i) {
-            std::cout << " ---------------------------------" << std::endl;
             auto &q{scrapers[i]->getQueue()};
             const auto &symbol{scrapers[i]->getSymbol()};
-            std::cout << "symbol: " << symbol << std::endl;
             if (q.pop(str)) {
                 result = true;
                 if (reader.parse(str, json)) {
-                    for (int index{0}, sz{static_cast<int>(json.size())};
-                         index < sz; ++index) {
+                    for (int index{0}, sz{static_cast<int>(json.size())}; index < sz; ++index) {
                         const auto &jv{json[index]};
-                        std::istringstream ss(jv["time"].asString());
-                        ss >> date::parse("%Y-%m-%dT%H:%M:%S", tp);
-                        trades.emplace_back(symbol, jv["trade_id"].asInt(),
-                                            jv["side"].asString(),
-                                            jv["size"].asString(),
-                                            jv["price"].asString(), tp);
-                        std::cout << trades.back() << std::endl;
+                        const auto &time_str{jv["time"].asString()};
+                        std::istringstream ss(time_str);
+                        ss >> date::parse("%Y-%m-%dT%H:%M:%S", timepoint);
+
+                        const uint64_t trade_id{static_cast<uint64_t>(jv["trade_id"].asInt())};
+                        auto [it, inserted] = trades[timepoint].emplace(
+                            std::piecewise_construct, std::forward_as_tuple(trade_id),
+                            std::forward_as_tuple(symbol, trade_id, jv["side"].asString(), jv["size"].asString(),
+                                                  jv["price"].asString(), time_str, timepoint));
+                        if (inserted) {
+                            new_trades.push_back(&(it->second));
+                        }
                     }
                 }
             }
         }
+
+        for (const auto *ptrade : new_trades) {
+            const auto lower_timepoint{ptrade->timepoint - std::chrono::milliseconds(5)};
+            const auto upper_timepoint{ptrade->timepoint + std::chrono::milliseconds(5)};
+            bool found_match{false};
+            for (auto it{trades.lower_bound(lower_timepoint)};
+                 !found_match && it != trades.end() && it->first <= upper_timepoint; ++it) {
+                for (const auto &[tp, trade] : it->second) {
+                    if (trade.trade_id != ptrade->trade_id) {
+                        found_match = true;
+                        break;
+                    }
+                }
+            }
+            if (found_match) {
+                if (published_trades[ptrade->timepoint].emplace(ptrade->trade_id).second) {
+                    std::cout << *ptrade << std::endl;
+                    queue.push(*ptrade);
+                }
+            }
+        }
+
+        purge(trades, max_size);
+        purge(published_trades, max_size);
 
         return result;
     }
@@ -61,11 +95,11 @@ class Aggregator::Impl {
     ScraperList &scrapers;
     Json::Reader reader;
     QueueType queue;
-    std::map<uint64_t, std::unordered_map<uint64_t, Trade>> trades;
+    std::map<std::chrono::system_clock::time_point, std::unordered_map<uint64_t, Trade>> trades;
+    std::map<std::chrono::system_clock::time_point, std::unordered_set<uint64_t>> published_trades;
 };
 
-Aggregator::Aggregator(ScraperList &scrapers)
-    : impl{std::make_unique<Impl>(scrapers)} {}
+Aggregator::Aggregator(ScraperList &scrapers) : impl{std::make_unique<Impl>(scrapers)} {}
 
 Aggregator::~Aggregator() = default;
 
