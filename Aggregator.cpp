@@ -77,7 +77,6 @@ class Aggregator::Impl {
             }
             if (found_match) {
                 if (published_trades[ptrade->timepoint].emplace(ptrade->trade_id).second) {
-                    std::cout << *ptrade << std::endl;
                     queue.push(*ptrade);
                 }
             }
