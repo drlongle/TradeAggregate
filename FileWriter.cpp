@@ -11,7 +11,7 @@ namespace TradeAggregate {
 class FileWriter::Impl {
   public:
     Impl(Aggregator &aggregator_, const std::string &filepath)
-        : aggregator{aggregator_}, ofs{filepath, std::ios::out | std::ios::trunc} {}
+        : aggregator{aggregator_}, ofs{filepath, std::ios::out | std::ios::app} {}
 
     bool poll() {
         auto &q{aggregator.getQueue()};

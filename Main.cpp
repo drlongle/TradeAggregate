@@ -65,7 +65,7 @@ std::vector<TradeAggregate::ScraperConfig> parseInputFile(const std::string &inp
     for (int index{0}, sz{static_cast<int>(endpoints.size())}; index < sz; ++index) {
         const auto &jv{endpoints[index]};
         configs.emplace_back(jv["symbol"].asString(), jv["host"].asString(), jv["port"].asString(),
-                             jv["path"].asString(), jv["version"].asInt());
+                             jv["path"].asString(), jv["http_version"].asInt());
     }
 
     return configs;

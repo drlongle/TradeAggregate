@@ -5,21 +5,21 @@
             "host" : "api.exchange.coinbase.com",
             "port" : "443",
             "path" : "/products/BTC-USD/trades",
-            "version" : 11
+            "http_version" : 11
         },
         {
             "symbol" : "ETH-USD",
             "host" : "api.exchange.coinbase.com",
             "port" : "443",
             "path" : "/products/ETH-USD/trades",
-            "version" : 11
+            "http_version" : 11
         },
         {
             "symbol" : "SOL-USD",
             "host" : "api.exchange.coinbase.com",
             "port" : "443",
             "path" : "/products/SOL-USD/trades",
-            "version" : 11
+            "http_version" : 11
         }
     ]
 }

@@ -76,14 +76,11 @@ class Aggregator::Impl {
                 }
             }
             if (found_match) {
-                if (published_trades[ptrade->timepoint].emplace(ptrade->trade_id).second) {
-                    queue.push(*ptrade);
-                }
+                queue.push(*ptrade);
             }
         }
 
         purge(trades, max_size);
-        purge(published_trades, max_size);
 
         return result;
     }
@@ -95,7 +92,6 @@ class Aggregator::Impl {
     Json::Reader reader;
     QueueType queue;
     std::map<std::chrono::system_clock::time_point, std::unordered_map<uint64_t, Trade>> trades;
-    std::map<std::chrono::system_clock::time_point, std::unordered_set<uint64_t>> published_trades;
 };
 
 Aggregator::Aggregator(ScraperList &scrapers) : impl{std::make_unique<Impl>(scrapers)} {}
